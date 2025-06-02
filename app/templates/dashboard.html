@@ -120,7 +120,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
         
         .event-type {
@@ -145,6 +145,38 @@
             font-size: 1.1rem;
             line-height: 1.5;
             color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        .event-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 4px;
+        }
+        
+        .detail-value {
+            color: #6c757d;
+            word-break: break-all;
+        }
+        
+        .detail-value.null {
+            font-style: italic;
+            color: #adb5bd;
         }
         
         .no-events {
@@ -230,17 +262,21 @@
         let isLoading = false;
         
         function formatTimeAgo(timestamp) {
-            const now = new Date();
-            const eventTime = new Date(timestamp);
-            const diffMs = now - eventTime;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMs / 3600000);
-            const diffDays = Math.floor(diffMs / 86400000);
-            
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-            if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-            return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            try {
+                const now = new Date();
+                const eventTime = new Date(timestamp.replace('Z', ''));
+                const diffMs = now - eventTime;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+                
+                if (diffMins < 1) return 'Just now';
+                if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+                if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            } catch (e) {
+                return 'Unknown time';
+            }
         }
         
         function showError(message) {
@@ -299,15 +335,46 @@
             noEventsMessage.style.display = 'none';
             eventsContainer.style.display = 'block';
             
-            eventsContainer.innerHTML = events.map(event => `
-                <div class="event-item event-${event.event_type}">
-                    <div class="event-header">
-                        <span class="event-type ${event.event_type}">${event.event_type.replace('_', ' ')}</span>
-                        <span class="event-time">${formatTimeAgo(event.timestamp)}</span>
+            eventsContainer.innerHTML = events.map(event => {
+                const action = event.action ? event.action.toLowerCase() : 'unknown';
+                const displayMessage = event.display_message || 'No message available';
+                
+                return `
+                    <div class="event-item event-${action}">
+                        <div class="event-header">
+                            <span class="event-type ${action}">${event.action || 'UNKNOWN'}</span>
+                            <span class="event-time">${formatTimeAgo(event.timestamp)}</span>
+                        </div>
+                        <div class="event-message">${displayMessage}</div>
+                        <div class="event-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Request ID</div>
+                                <div class="detail-value ${!event.request_id ? 'null' : ''}">${event.request_id || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Author</div>
+                                <div class="detail-value">${event.author || 'Unknown'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Action</div>
+                                <div class="detail-value">${event.action || 'Unknown'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">From Branch</div>
+                                <div class="detail-value ${!event.from_branch ? 'null' : ''}">${event.from_branch || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">To Branch</div>
+                                <div class="detail-value ${!event.to_branch ? 'null' : ''}">${event.to_branch || 'N/A'}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Timestamp</div>
+                                <div class="detail-value">${event.timestamp || 'Unknown'}</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="event-message">${event.message}</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
         // Initial load
