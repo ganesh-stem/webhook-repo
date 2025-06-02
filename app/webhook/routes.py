@@ -30,7 +30,7 @@ def receiver():
         print(f"Error processing webhook: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
-def generate_request_id(payload, event_type):
+def generate_request_id(payload, event_type, action=None):
     """Generate a unique request_id based on payload content"""
     if event_type == 'push':
         # Use commit hash for push events
@@ -38,9 +38,14 @@ def generate_request_id(payload, event_type):
         if commits:
             return commits[0].get('id', '')[:12]  # First 12 chars of commit hash
     elif event_type == 'pull_request':
-        # Use PR number for pull request events
+        # Use PR number with action suffix for pull request events
         pr_number = payload.get('pull_request', {}).get('number', '')
-        return f"pr-{pr_number}"
+        if action == 'opened':
+            return f"pr-{pr_number}-opened"
+        elif action == 'closed' and payload.get('pull_request', {}).get('merged'):
+            return f"pr-{pr_number}-merged"
+        else:
+            return f"pr-{pr_number}-{action or 'unknown'}"
     
     # Fallback: generate hash from payload
     payload_str = json.dumps(payload, sort_keys=True)
@@ -81,7 +86,7 @@ def process_pull_request_event(payload):
             from_branch = payload['pull_request']['head']['ref']
             to_branch = payload['pull_request']['base']['ref']
             timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-            request_id = generate_request_id(payload, 'pull_request')
+            request_id = generate_request_id(payload, 'pull_request', action)
             
             event_data = {
                 'request_id': request_id,
@@ -102,7 +107,7 @@ def process_pull_request_event(payload):
             from_branch = payload['pull_request']['head']['ref']
             to_branch = payload['pull_request']['base']['ref']
             timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-            request_id = generate_request_id(payload, 'pull_request')
+            request_id = generate_request_id(payload, 'pull_request', action)
             
             event_data = {
                 'request_id': request_id,
