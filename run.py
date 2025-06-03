@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import os
 
 # Load environment variables
-load_dotenv()
+load_dotenv('E:\workspace\flask_app\main\.env')
 
 app = create_app()
 
